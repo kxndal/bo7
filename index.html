@@ -281,6 +281,7 @@
         <span class="ptag ptag-green">🎯 Nahkampf-Fokus</span>
         <span class="ptag ptag-orange">⚡ ADS + Hip Fire Mix</span>
       </div>
+      <div style="font-size:11px;color:var(--dim);margin-top:8px">Profil zuletzt aktualisiert: 11. März 2026</div>
     </div>
   </div>
 
@@ -318,16 +319,18 @@
 
 <script>
 // ── Spielerprofil ────────────────────────────────────────────
+// Profil zuletzt aktualisiert: 11. März 2026
 const PLAYER_FIT = {
-  SMG:             { score: 3, label: '⚡ Perfekt für dich',    tip: '🔇 Schalldämpfer an Mündung (Klang verbergen + kein Radar). Kurzer Lauf für max. ADS-Speed – bei niedriger Sens ist schnelles ADS entscheidend. Laser (z.B. STOVL) für Hip-Fire in engsten Ecken – du spielst ohnehin Hip+ADS-Mix. Faltschaft oder Agility-Schaft der Slide-Cancel-kompatibel ist (kein schwerer Schaft!). Sprint-to-Fire Griff – Pflicht. Pistole als Backup wenn Magazin leer.' },
-  ASSAULT_RIFLE:   { score: 2, label: '✓ Gut geeignet',         tip: '🔇 Schalldämpfer Pflicht (hoher Rank – Radar = Tod). Kleines Reflexvisier max. 1.5x – kein Zoom für Nahkampf-Rusher. Mobilität-Schaft der Slide-Cancel erlaubt. Sprint-to-Fire Griff für Controller-Rusher. Bei niedriger Sens: Recoil-Kontrolle durch Griff leicht verbessern, aber Speed hat Vorrang. Laser für Hip-Fire-Sekunden beim Ecken-Rushen.' },
-  PISTOL:          { score: 2, label: '✓ Deine Zweitwaffe',     tip: 'Deine gewählte Sekundärwaffe – optimal für Slide-Cancel-Rusher. Schnellster Waffenwechsel: Snake-Shot oder schnellster Abzug. Schalldämpfer auch hier wenn verfügbar. Als High-Rank Spieler: Waffe präzise wechseln statt nachladen – Pistole als Finishing-Tool.' },
-  SNIPER_RIFLE:    { score: 0, label: '✗ Nicht für Nahkampf',   tip: 'Du fokussierst Nahkampf – Scharfschützengewehre sind hier fehl am Platz. Pistole als Zweitwaffe macht Sniper-Combo unpraktisch.' },
-  DMR:             { score: 1, label: '~ Nur auf Distanz',       tip: 'Semi-Auto für Mittelrange – selten optimal bei deinem Nahkampf-Fokus. Falls genutzt: Schalldämpfer, kleine Optik max. 2x, kein Bipod. Auf engen TDM-Maps deutlich schlechter als SMG.' },
-  LMG:             { score: 0, label: '✗ Zu träge',              tip: 'LMGs kontern deinen Slide-Cancel/Jump-Shot-Stil komplett. Zu schwer für schnelle Bewegungen, zu langes ADS. Mit Pistole als Zweitwaffe hast du keinen Grund für ein LMG.' },
-  MARKSMAN_RIFLE:  { score: 1, label: '~ Nur auf Distanz',       tip: 'Ähnlich DMR – für Halte-Positionen auf Mittelrange. Bei Nahkampf-Fokus kaum sinnvoll. Falls verwendet: Schalldämpfer, Sprint-to-Fire Griff, kleine Optik.' },
-  SHOTGUN:         { score: 0, label: '✗ Nicht dein Stil',       tip: 'Du bevorzugst keine Schrotflinten – diese Waffe überspringen.' },
-  MELEE:           { score: 0, label: '✗ Zu riskant',            tip: 'Im TDM Rusher-Stil ohne Fernkampf zu riskant.' },
+  SMG:             { score: 3, label: '⚡ Perfekt für dich',    tip: '🔇 Schalldämpfer + kurzer Lauf für max. ADS-Speed. Sprint-to-Fire Griff und leichter Schaft für Slide-Cancel.' },
+  ASSAULT_RIFLE:   { score: 2, label: '✓ Gut geeignet',         tip: '🔇 Schalldämpfer Pflicht. Kleines Visier max. 1.5×, Mobilität-Schaft für Slide-Cancel.' },
+  PISTOL:          { score: 2, label: '✓ Deine Zweitwaffe',     tip: 'Schnell wechseln statt nachladen. Schalldämpfer wenn verfügbar.' },
+  SNIPER_RIFLE:    { score: 0, label: '✗ Nicht für Nahkampf',   tip: 'Nicht kompatibel mit deinem Nahkampf-Fokus.' },
+  DMR:             { score: 1, label: '~ Nur auf Distanz',       tip: 'Nur auf Maps mit langen Sichtlinien sinnvoll.' },
+  LMG:             { score: 0, label: '✗ Zu träge',              tip: 'Zu träge für Slide-Cancel/Jump-Shot-Stil.' },
+  MARKSMAN_RIFLE:  { score: 1, label: '~ Nur auf Distanz',       tip: 'Nur auf Distanz – bei Nahkampf-Fokus selten erste Wahl.' },
+  SHOTGUN:         { score: 0, label: '✗ Nicht dein Stil',       tip: 'Du bevorzugst keine Schrotflinten.' },
+  MELEE:           { score: 0, label: '✗ Zu riskant',            tip: 'Im TDM-Rusher-Stil ohne Fernkampf zu riskant.' },
+  LAUNCHER:        { score: 0, label: '✗ Kein Meta',             tip: 'Launcher sind kein Bestandteil der Waffen-Meta.' },
 };
 
 function getFit(type) { return PLAYER_FIT[type] || { score: 1, label: '~', tip: '' }; }
@@ -463,23 +466,12 @@ function renderTier(tierName, ids, weaponsById, buildsById, ranks) {
       if (daysAgo < 45) patchBadge = `<span class="badge-patch">🔥 Kürzlich geändert</span>`;
     }
 
-    // Map tip
-    const mt = MAP_TIPS[w.type];
-    const mapTipHtml = mt ? `<div class="map-tip"><div class="mi">${mt.icon}</div><div><div class="ml">Map-Empfehlung</div>${mt.text}</div></div>` : '';
-
     // Recoil badge style
     const recoilBadge = recoil.level === 'low'
       ? `<span class="recoil-badge rc-low">${recoil.label}</span>`
       : recoil.level === 'high'
       ? `<span class="recoil-badge rc-high">${recoil.label}</span>`
       : `<span class="recoil-badge rc-mid">${recoil.label}</span>`;
-
-    // Recoil tip text appended
-    const recoilTip = recoil.level === 'high'
-      ? ' <strong style="color:#ff7043">⚠ Hoher Recoil – nicht empfohlen für dich.</strong> Falls du sie trotzdem spielst: Kompensator + Recoil-Control-Vorgriff einbauen.'
-      : recoil.level === 'low'
-      ? ' Recoil gut kontrollierbar – ideal für deinen Spielstil.'
-      : ' Recoil ist manageable – Kompensator empfohlen.';
 
     // Tip box color per fit score
     const tipColors  = ['rgba(80,80,80,.15)','rgba(255,193,7,.07)','rgba(41,121,255,.08)','rgba(0,200,83,.08)'];
@@ -491,7 +483,7 @@ function renderTier(tierName, ids, weaponsById, buildsById, ranks) {
         <div class="tip-icon">${fit.score===3?'⚡':fit.score===2?'✓':fit.score===1?'~':'✗'}</div>
         <div>
           <div class="tip-label" style="color:${tipLabelColors[fit.score]}">${fit.label}</div>
-          <div class="tip-text">${fit.tip}${recoilTip}</div>
+          <div class="tip-text">${fit.tip}</div>
         </div>
       </div>` : '';
 
@@ -511,7 +503,6 @@ function renderTier(tierName, ids, weaponsById, buildsById, ranks) {
     </div>
     <div class="loadout">
       ${tipHtml}
-      ${mapTipHtml}
       <div class="ltitle">Bestes Loadout (wzstats.gg)</div>
       ${renderAttachments(build)}
     </div>`;
@@ -524,18 +515,7 @@ function renderTier(tierName, ids, weaponsById, buildsById, ranks) {
   </div>`;
 }
 
-// ── Map-Empfehlungen ─────────────────────────────────────────
-const MAP_TIPS = {
-  SMG:            { icon: '🏠', text: 'Deine stärkste Wahl auf engen Maps (Nuketown, Shipment, Rewind, Stash House). Slide Cancel + Jump Shots + SMG = maximale Effektivität. Auf großen Maps mit langen Sichtlinien → AR.' },
-  ASSAULT_RIFLE:  { icon: '🗺️', text: 'Mittelgroße Maps (Vault, Babylon, Highrise). Als Nahkampf-Rusher: kurzer Lauf + Schalldämpfer. Auf sehr engen Maps verlierst du gegen gut gespielte SMGs.' },
-  LMG:            { icon: '🚫', text: 'Nicht empfohlen für deinen Spielstil. Slide Cancel + LMG funktioniert kaum. Falls nötig: nur in Halte-Positionen auf offenen Maps.' },
-  SNIPER_RIFLE:   { icon: '🚫', text: 'Nicht kompatibel mit Nahkampf-Fokus. Auf engen TDM-Maps eine Last.' },
-  DMR:            { icon: '🗺️', text: 'Nur auf mittelgroßen Maps mit langen Sichtlinien sinnvoll. Bei Nahkampf-Fokus selten erste Wahl – SMG/AR deutlich besser.' },
-  SHOTGUN:        { icon: '🚫', text: 'Du bevorzugst keine Schrotflinten.' },
-  PISTOL:         { icon: '✅', text: 'Deine Zweitwaffe – auf jeder Map nützlich. Schneller Wechsel statt nachladen. Besonders stark nach Slide Cancel wenn Magazin leer.' },
-  MARKSMAN_RIFLE: { icon: '🗺️', text: 'Ähnlich DMR. Mittelgroße Maps mit Korridoren. Für Nahkampf-Rusher selten optimal.' },
-  MELEE:          { icon: '🚫', text: 'Extrem riskant ohne Fernkampf. Nicht empfohlen.' },
-};
+// MAP_TIPS entfernt (vereinfacht)
 
 // ── State ────────────────────────────────────────────────────
 let sortByProfile = false;
