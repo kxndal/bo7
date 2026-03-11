@@ -341,18 +341,17 @@
 <script>
 // ── Spielerprofil ────────────────────────────────────────────
 // Profil zuletzt aktualisiert: 11. März 2026, 20:45 Uhr
-// keySlots = Prioritäts-Slots für dein Profil → zeigt echte Attachment-Namen aus wzstats
 const PLAYER_FIT = {
-  SMG:            { score: 3, label: '⚡ Perfekt für dich',  keySlots: ['muzzle','barrel','stock','rearGrip'] },
-  ASSAULT_RIFLE:  { score: 2, label: '✓ Gut geeignet',       keySlots: ['muzzle','optic','stock','rearGrip'] },
-  PISTOL:         { score: 2, label: '✓ Deine Zweitwaffe',   keySlots: ['muzzle','trigger','barrel'] },
-  SNIPER_RIFLE:   { score: 0, label: '✗ Nicht für Nahkampf', keySlots: [] },
-  DMR:            { score: 1, label: '~ Nur auf Distanz',     keySlots: ['muzzle','optic','rearGrip'] },
-  LMG:            { score: 0, label: '✗ Zu träge',            keySlots: [] },
-  MARKSMAN_RIFLE: { score: 1, label: '~ Nur auf Distanz',     keySlots: ['muzzle','optic','rearGrip'] },
-  SHOTGUN:        { score: 0, label: '✗ Nicht dein Stil',    keySlots: [] },
-  MELEE:          { score: 0, label: '✗ Zu riskant',         keySlots: [] },
-  LAUNCHER:       { score: 0, label: '✗ Kein Meta',          keySlots: [] },
+  SMG:            { score: 3, label: '⚡ Perfekt für dich'  },
+  ASSAULT_RIFLE:  { score: 2, label: '✓ Gut geeignet'       },
+  PISTOL:         { score: 2, label: '✓ Deine Zweitwaffe'   },
+  SNIPER_RIFLE:   { score: 0, label: '✗ Nicht für Nahkampf' },
+  DMR:            { score: 1, label: '~ Nur auf Distanz'     },
+  LMG:            { score: 0, label: '✗ Zu träge'            },
+  MARKSMAN_RIFLE: { score: 1, label: '~ Nur auf Distanz'     },
+  SHOTGUN:        { score: 0, label: '✗ Nicht dein Stil'    },
+  MELEE:          { score: 0, label: '✗ Zu riskant'         },
+  LAUNCHER:       { score: 0, label: '✗ Kein Meta'          },
 };
 
 function getFit(type) { return PLAYER_FIT[type] || { score: 1, label: '~', tip: '' }; }
@@ -495,21 +494,8 @@ function renderTier(tierName, ids, weaponsById, buildsById, ranks) {
       ? `<span class="recoil-badge rc-high">${recoil.label}</span>`
       : `<span class="recoil-badge rc-mid">${recoil.label}</span>`;
 
-    // Fit recommendation grid — pulls real attachment names from wzstats build
+    // Fit label color
     const tipLabelColors = ['#555','#ffd54f','#82b1ff','#69f0ae'];
-    const keyAtts = (fit.keySlots || [])
-      .map(slot => build?.[slot]?.name ? { slot: SLOT_DE[slot] || slot, name: build[slot].name } : null)
-      .filter(Boolean);
-    const tipHtml = keyAtts.length ? `
-      <div style="margin-bottom:14px">
-        <div class="ltitle" style="color:${tipLabelColors[fit.score]}">${fit.label} – Prioritäts-Aufsätze</div>
-        <div class="att-grid">
-          ${keyAtts.map(s => `<div class="att"><div class="att-slot">${s.slot}</div><div class="att-name">${s.name}</div></div>`).join('')}
-        </div>
-      </div>` : fit.label ? `
-      <div style="margin-bottom:14px">
-        <div class="ltitle" style="color:${tipLabelColors[fit.score]}">${fit.label}</div>
-      </div>` : '';
 
     return `
     <div class="weapon-card" data-type="${w.type}" data-recoil="${recoil.level}" onclick="toggle(this)">
@@ -526,8 +512,7 @@ function renderTier(tierName, ids, weaponsById, buildsById, ranks) {
       <span class="chevron">▾</span>
     </div>
     <div class="loadout">
-      ${tipHtml}
-      <div class="ltitle">Bestes Loadout (wzstats.gg)</div>
+      <div class="ltitle" style="color:${tipLabelColors[fit.score]}">${fit.label}</div>
       ${renderAttachments(build)}
     </div>`;
   }).join('');
