@@ -341,36 +341,18 @@
 <script>
 // ── Spielerprofil ────────────────────────────────────────────
 // Profil zuletzt aktualisiert: 11. März 2026, 20:45 Uhr
+// keySlots = Prioritäts-Slots für dein Profil → zeigt echte Attachment-Namen aus wzstats
 const PLAYER_FIT = {
-  SMG: { score: 3, label: '⚡ Perfekt für dich', slots: [
-    { slot: 'Mündung',  name: 'Schalldämpfer' },
-    { slot: 'Lauf',     name: 'Kurzer Lauf' },
-    { slot: 'Schaft',   name: 'Leichter Schaft' },
-    { slot: 'Griff',    name: 'Sprint-to-Fire' },
-  ]},
-  ASSAULT_RIFLE: { score: 2, label: '✓ Gut geeignet', slots: [
-    { slot: 'Mündung',  name: 'Schalldämpfer' },
-    { slot: 'Optik',    name: 'Max. 1.5× Reflex' },
-    { slot: 'Schaft',   name: 'Mobilität-Schaft' },
-    { slot: 'Griff',    name: 'Sprint-to-Fire' },
-  ]},
-  PISTOL: { score: 2, label: '✓ Deine Zweitwaffe', slots: [
-    { slot: 'Mündung',  name: 'Schalldämpfer' },
-    { slot: 'Abzug',    name: 'Schnellster Abzug' },
-  ]},
-  SNIPER_RIFLE:   { score: 0, label: '✗ Nicht für Nahkampf', slots: [] },
-  DMR:            { score: 1, label: '~ Nur auf Distanz', slots: [
-    { slot: 'Mündung',  name: 'Schalldämpfer' },
-    { slot: 'Optik',    name: 'Max. 2× Visier' },
-  ]},
-  LMG:            { score: 0, label: '✗ Zu träge',          slots: [] },
-  MARKSMAN_RIFLE: { score: 1, label: '~ Nur auf Distanz', slots: [
-    { slot: 'Mündung',  name: 'Schalldämpfer' },
-    { slot: 'Griff',    name: 'Sprint-to-Fire' },
-  ]},
-  SHOTGUN:        { score: 0, label: '✗ Nicht dein Stil',   slots: [] },
-  MELEE:          { score: 0, label: '✗ Zu riskant',        slots: [] },
-  LAUNCHER:       { score: 0, label: '✗ Kein Meta',         slots: [] },
+  SMG:            { score: 3, label: '⚡ Perfekt für dich',  keySlots: ['muzzle','barrel','stock','rearGrip'] },
+  ASSAULT_RIFLE:  { score: 2, label: '✓ Gut geeignet',       keySlots: ['muzzle','optic','stock','rearGrip'] },
+  PISTOL:         { score: 2, label: '✓ Deine Zweitwaffe',   keySlots: ['muzzle','trigger','barrel'] },
+  SNIPER_RIFLE:   { score: 0, label: '✗ Nicht für Nahkampf', keySlots: [] },
+  DMR:            { score: 1, label: '~ Nur auf Distanz',     keySlots: ['muzzle','optic','rearGrip'] },
+  LMG:            { score: 0, label: '✗ Zu träge',            keySlots: [] },
+  MARKSMAN_RIFLE: { score: 1, label: '~ Nur auf Distanz',     keySlots: ['muzzle','optic','rearGrip'] },
+  SHOTGUN:        { score: 0, label: '✗ Nicht dein Stil',    keySlots: [] },
+  MELEE:          { score: 0, label: '✗ Zu riskant',         keySlots: [] },
+  LAUNCHER:       { score: 0, label: '✗ Kein Meta',          keySlots: [] },
 };
 
 function getFit(type) { return PLAYER_FIT[type] || { score: 1, label: '~', tip: '' }; }
@@ -513,13 +495,16 @@ function renderTier(tierName, ids, weaponsById, buildsById, ranks) {
       ? `<span class="recoil-badge rc-high">${recoil.label}</span>`
       : `<span class="recoil-badge rc-mid">${recoil.label}</span>`;
 
-    // Fit recommendation grid (same style as attachment grid)
+    // Fit recommendation grid — pulls real attachment names from wzstats build
     const tipLabelColors = ['#555','#ffd54f','#82b1ff','#69f0ae'];
-    const tipHtml = fit.slots && fit.slots.length ? `
+    const keyAtts = (fit.keySlots || [])
+      .map(slot => build?.[slot]?.name ? { slot: SLOT_DE[slot] || slot, name: build[slot].name } : null)
+      .filter(Boolean);
+    const tipHtml = keyAtts.length ? `
       <div style="margin-bottom:14px">
-        <div class="ltitle" style="color:${tipLabelColors[fit.score]}">${fit.label}</div>
+        <div class="ltitle" style="color:${tipLabelColors[fit.score]}">${fit.label} – Prioritäts-Aufsätze</div>
         <div class="att-grid">
-          ${fit.slots.map(s => `<div class="att"><div class="att-slot">${s.slot}</div><div class="att-name">${s.name}</div></div>`).join('')}
+          ${keyAtts.map(s => `<div class="att"><div class="att-slot">${s.slot}</div><div class="att-name">${s.name}</div></div>`).join('')}
         </div>
       </div>` : fit.label ? `
       <div style="margin-bottom:14px">
