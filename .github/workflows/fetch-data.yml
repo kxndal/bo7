@@ -1,0 +1,51 @@
+name: Fetch wzstats Data
+
+on:
+  schedule:
+    - cron: '0 5 * * *'   # täglich 05:00 UTC
+  workflow_dispatch:        # manuell auslösbar
+  push:
+    branches: [master]
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch weapons & tier list
+        run: |
+          curl -sf \
+            -H "Referer: https://wzstats.gg/" \
+            -H "Origin: https://wzstats.gg" \
+            -H "User-Agent: Mozilla/5.0" \
+            "https://app.wzstats.gg/wz2/weapons/meta/weapons-and-tier-lists/?streamerProfileId=wzstats&weaponGames[]=bo7&addConversionKit=true&onlyTierlists[]=bo7&weaponAttributes[]=name&weaponAttributes[]=type&weaponAttributes[]=weaponCode&weaponAttributes[]=imageVersion&weaponAttributes[]=displayType&weaponAttributes[]=unlockedAtPlayerLevel&weaponAttributes[]=game&weaponAttributes[]=isNew&weaponAttributes[]=updateBO7" \
+            -o weapons.json
+
+      - name: Fetch builds
+        run: |
+          curl -sf \
+            -H "Referer: https://wzstats.gg/" \
+            -H "Origin: https://wzstats.gg" \
+            -H "User-Agent: Mozilla/5.0" \
+            "https://app.wzstats.gg/wz2/weapons/builds/wzstats/with-attachments/?game=bo7&language=de&addConversionKit=true&addNewBuilds=true" \
+            -o builds.json
+
+      - name: Fetch season
+        run: |
+          curl -sf \
+            -H "Referer: https://wzstats.gg/" \
+            -H "Origin: https://wzstats.gg" \
+            -H "User-Agent: Mozilla/5.0" \
+            "https://app.wzstats.gg/season/bo7" \
+            -o season.json || echo '{"season":"2"}' > season.json
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add weapons.json builds.json season.json
+          git diff --staged --quiet || git commit -m "chore: update wzstats data $(date -u +%Y-%m-%d)"
+          git push
