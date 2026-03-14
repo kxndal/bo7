@@ -119,6 +119,10 @@
   .att { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; }
   .att-slot { font-size: 10px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
   .att-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .att-togs { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .att-tog { background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 600; color: var(--dim); cursor: pointer; transition: all .15s; }
+  .att-tog:hover { border-color: #888; color: var(--text); }
+  .att-tog.on { background: #1e3a2a; border-color: #4caf7d; color: #4caf7d; }
 
   /* ── LOADING / ERROR ── */
   .loading { text-align: center; padding: 60px; color: var(--muted); font-size: 16px; }
@@ -449,18 +453,39 @@ function renderImg(id, ver, name) {
     onerror="this.outerHTML='<div class=\\'wimg-err\\'><svg viewBox=\\'0 0 100 36\\' fill=\\'none\\'><rect x=\\'5\\' y=\\'13\\' width=\\'80\\' height=\\'10\\' rx=\\'2\\' fill=\\'#888\\'/><rect x=\\'3\\' y=\\'11\\' width=\\'16\\' height=\\'6\\' rx=\\'2\\' fill=\\'#aaa\\'/><rect x=\\'82\\' y=\\'9\\' width=\\'12\\' height=\\'5\\' rx=\\'2\\' fill=\\'#777\\'/></svg></div>'">`;
 }
 
-function renderAttachments(build) {
-  if (!build) return '<p style="color:var(--dim);font-size:13px">Kein Loadout verfügbar</p>';
-  const slots = ['muzzle','barrel','optic','stock','underbarrel','rearGrip','magazine','laser','firemods','trigger','ammunition','comb','guard','wire','grip','bolt','perk'];
-  const atts = [];
-  for (const slot of slots) {
-    const a = build[slot];
-    if (a && a.name) atts.push({slot, name: a.name});
+function selectAtts(build, withSup, withOpt) {
+  const ORDER = ['muzzle','barrel','optic','stock','underbarrel','rearGrip','magazine','laser','firemods','trigger','ammunition','comb','guard','wire','grip','bolt','perk'];
+  const all = ORDER.map(s => build[s]?.name ? {slot:s, name:build[s].name} : null).filter(Boolean);
+  const forced = [];
+  if (withSup) { const s = all.find(a => a.slot==='muzzle');   if (s) forced.push(s); }
+  if (withOpt) { const s = all.find(a => a.slot==='optic');    if (s) forced.push(s); }
+  const forcedSet = new Set(forced.map(f => f.slot));
+  return [...forced, ...all.filter(a => !forcedSet.has(a.slot))].slice(0, 5);
+}
+
+const PROFILE_FALLBACK = {
+  SMG:            [{slot:'muzzle',name:'Schalldämpfer'},{slot:'barrel',name:'Kurzer Lauf'},{slot:'stock',name:'Leichter Schaft'},{slot:'rearGrip',name:'Sprint-to-Fire Griff'},{slot:'firemods',name:'Schnellfeuer-Mod'}],
+  ASSAULT_RIFLE:  [{slot:'muzzle',name:'Schalldämpfer'},{slot:'optic',name:'Max. 1.5× Reflex'},{slot:'stock',name:'Mobilität-Schaft'},{slot:'rearGrip',name:'Sprint-to-Fire Griff'},{slot:'underbarrel',name:'Leichter Griff'}],
+  PISTOL:         [{slot:'muzzle',name:'Schalldämpfer'},{slot:'barrel',name:'Langer Lauf'},{slot:'trigger',name:'Schnellster Abzug'},{slot:'rearGrip',name:'Kontroll-Griff'},{slot:'magazine',name:'Großes Magazin'}],
+  DMR:            [{slot:'muzzle',name:'Schalldämpfer'},{slot:'optic',name:'Max. 2× Visier'},{slot:'barrel',name:'Langer Lauf'},{slot:'stock',name:'Stabiler Schaft'},{slot:'rearGrip',name:'Kontroll-Griff'}],
+  LMG:            [{slot:'muzzle',name:'Schalldämpfer'},{slot:'barrel',name:'Stabilisierungs-Lauf'},{slot:'underbarrel',name:'Bipod'},{slot:'stock',name:'Schwerer Schaft'},{slot:'magazine',name:'Großes Magazin'}],
+  MARKSMAN_RIFLE: [{slot:'muzzle',name:'Schalldämpfer'},{slot:'optic',name:'Max. 2× Visier'},{slot:'barrel',name:'Langer Lauf'},{slot:'stock',name:'Stabiler Schaft'},{slot:'rearGrip',name:'Kontroll-Griff'}],
+  SHOTGUN:        [{slot:'muzzle',name:'Choke'},{slot:'barrel',name:'Langer Lauf'},{slot:'stock',name:'Stabiler Schaft'},{slot:'rearGrip',name:'Kontroll-Griff'},{slot:'magazine',name:'Großes Magazin'}],
+};
+
+function renderAttachments(build, withSup, withOpt, weaponType) {
+  let five;
+  if (build) {
+    five = selectAtts(build, withSup, withOpt);
   }
-  if (!atts.length) return '<p style="color:var(--dim);font-size:13px">Kein Loadout verfügbar</p>';
-  const five = atts.slice(0, 5);
+  if (!five?.length) {
+    const fb = PROFILE_FALLBACK[weaponType] || PROFILE_FALLBACK.ASSAULT_RIFLE;
+    return '<p style="color:var(--dim);font-size:11px;margin-bottom:6px">⚠ Noch kein wzstats-Build — Profil-Empfehlung:</p><div class="att-grid">' +
+      fb.map(a => `<div class="att" style="border-color:#333"><div class="att-slot">${SLOT_DE[a.slot]||a.slot}</div><div class="att-name" style="color:var(--dim)">${a.name}</div></div>`).join('') +
+    '</div>';
+  }
   return '<div class="att-grid">' +
-    five.map(a => `<div class="att"><div class="att-slot">${SLOT_DE[a.slot] || a.slot}</div><div class="att-name">${a.name}</div></div>`).join('') +
+    five.map(a => `<div class="att"><div class="att-slot">${SLOT_DE[a.slot]||a.slot}</div><div class="att-name">${a.name}</div></div>`).join('') +
   '</div>';
 }
 
@@ -497,6 +522,17 @@ function renderTier(tierName, ids, weaponsById, buildsById, ranks) {
     // Fit label color
     const tipLabelColors = ['#555','#ffd54f','#82b1ff','#69f0ae'];
 
+    const hasSup = !!(build?.muzzle?.name);
+    const hasOpt = !!(build?.optic?.name);
+    // Check if suppressor/optic land naturally in top-5
+    const defFive = build ? selectAtts(build, false, false) : [];
+    const supInDef = defFive.some(a => a.slot === 'muzzle');
+    const optInDef = defFive.some(a => a.slot === 'optic');
+    const togBtns = [
+      hasSup ? `<button class="att-tog${supInDef?' on':''}" data-att="sup" onclick="toggleAtt(event,'${w.id}')" title="${supInDef?'Schalldämpfer ist bereits drin':'Schalldämpfer einbauen'}">🔇 Schalldämpfer</button>` : '',
+      hasOpt ? `<button class="att-tog${optInDef?' on':''}" data-att="opt" onclick="toggleAtt(event,'${w.id}')" title="${optInDef?'Visier ist bereits drin':'Visier einbauen'}">🔭 Visier</button>` : '',
+    ].filter(Boolean).join('');
+
     return `
     <div class="weapon-card" data-type="${w.type}" data-recoil="${recoil.level}" onclick="toggle(this)">
       ${renderImg(w.id, w.imageVersion, w.name)}
@@ -511,9 +547,10 @@ function renderTier(tierName, ids, weaponsById, buildsById, ranks) {
       </div>
       <span class="chevron">▾</span>
     </div>
-    <div class="loadout">
+    <div class="loadout" data-wid="${w.id}">
       <div class="ltitle" style="color:${tipLabelColors[fit.score]}">${fit.label}</div>
-      ${renderAttachments(build)}
+      ${togBtns ? `<div class="att-togs">${togBtns}</div>` : ''}
+      <div class="att-grid-wrap">${renderAttachments(build, supInDef, optInDef, w.type)}</div>
     </div>`;
   }).join('');
 
@@ -541,6 +578,19 @@ function toggle(card) {
     c.nextElementSibling.classList.remove('open');
   });
   if (!wasOpen) { card.classList.add('open'); detail.classList.add('open'); }
+}
+
+// ── Attachment toggle (Schalldämpfer / Visier) ────────────────
+function toggleAtt(e, weaponId) {
+  e.stopPropagation();
+  const btn = e.currentTarget;
+  btn.classList.toggle('on');
+  const loadout = btn.closest('.loadout');
+  const withSup = !!loadout.querySelector('[data-att="sup"].on');
+  const withOpt = !!loadout.querySelector('[data-att="opt"].on');
+  const build = _globalState?.buildsById[weaponId];
+  const wtype = loadout.previousElementSibling?.dataset?.type;
+  loadout.querySelector('.att-grid-wrap').innerHTML = renderAttachments(build, withSup, withOpt, wtype);
 }
 
 // ── Sort toggle ───────────────────────────────────────────────
