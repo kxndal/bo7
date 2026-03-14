@@ -428,19 +428,18 @@ function buildRanks(tiers, weaponsById) {
   return ranks;
 }
 
-// ── Fetch with CORS proxy fallback ───────────────────────────
-async function apiFetch(url) {
-  // Try direct first (works on localhost), then CORS proxy for GitHub Pages
-  try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
-  } catch (_) {
-    const proxy = 'https://corsproxy.io/?' + encodeURIComponent(url);
-    const r = await fetch(proxy);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
+// ── Fetch: lokale JSON-Dateien zuerst (GitHub Actions), sonst direkt ──
+const LOCAL = { weapons: './weapons.json', builds: './builds.json', season: './season.json' };
+async function apiFetch(url, localKey) {
+  if (localKey) {
+    try {
+      const r = await fetch(LOCAL[localKey], { cache: 'no-store' });
+      if (r.ok) return r.json();
+    } catch (_) {}
   }
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
 }
 
 // ── Render ───────────────────────────────────────────────────
@@ -459,8 +458,9 @@ function renderAttachments(build) {
     if (a && a.name) atts.push({slot, name: a.name});
   }
   if (!atts.length) return '<p style="color:var(--dim);font-size:13px">Kein Loadout verfügbar</p>';
+  const five = atts.slice(0, 5);
   return '<div class="att-grid">' +
-    atts.map(a => `<div class="att"><div class="att-slot">${SLOT_DE[a.slot] || a.slot}</div><div class="att-name">${a.name}</div></div>`).join('') +
+    five.map(a => `<div class="att"><div class="att-slot">${SLOT_DE[a.slot] || a.slot}</div><div class="att-name">${a.name}</div></div>`).join('') +
   '</div>';
 }
 
@@ -656,9 +656,9 @@ function renderTop3(tiers, weaponsById) {
     const SEASON_URL = 'https://app.wzstats.gg/season/bo7';
 
     const [tierData, buildsData, seasonData] = await Promise.all([
-      apiFetch(TIER_URL),
-      apiFetch(BUILDS_URL),
-      apiFetch(SEASON_URL).catch(() => null)
+      apiFetch(TIER_URL,   'weapons'),
+      apiFetch(BUILDS_URL, 'builds'),
+      apiFetch(SEASON_URL, 'season').catch(() => null)
     ]);
 
     const weaponsById = {};
