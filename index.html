@@ -454,13 +454,19 @@ function renderImg(id, ver, name) {
 }
 
 function selectAtts(build, withSup, withOpt) {
+  // true = force first, false = exclude entirely, null/undefined = natural order
   const ORDER = ['muzzle','barrel','optic','stock','underbarrel','rearGrip','magazine','laser','firemods','trigger','ammunition','comb','guard','wire','grip','bolt','perk'];
   const all = ORDER.map(s => build[s]?.name ? {slot:s, name:build[s].name} : null).filter(Boolean);
   const forced = [];
-  if (withSup) { const s = all.find(a => a.slot==='muzzle');   if (s) forced.push(s); }
-  if (withOpt) { const s = all.find(a => a.slot==='optic');    if (s) forced.push(s); }
+  if (withSup === true)  { const s = all.find(a => a.slot==='muzzle'); if (s) forced.push(s); }
+  if (withOpt === true)  { const s = all.find(a => a.slot==='optic');  if (s) forced.push(s); }
+  const exclude = new Set([
+    ...(withSup === false ? ['muzzle'] : []),
+    ...(withOpt === false ? ['optic']  : []),
+  ]);
   const forcedSet = new Set(forced.map(f => f.slot));
-  return [...forced, ...all.filter(a => !forcedSet.has(a.slot))].slice(0, 5);
+  const rest = all.filter(a => !forcedSet.has(a.slot) && !exclude.has(a.slot));
+  return [...forced, ...rest].slice(0, 5);
 }
 
 const PROFILE_FALLBACK = {
@@ -525,12 +531,16 @@ function renderTier(tierName, ids, weaponsById, buildsById, ranks) {
     const hasSup = !!(build?.muzzle?.name);
     const hasOpt = !!(build?.optic?.name);
     // Check if suppressor/optic land naturally in top-5
-    const defFive = build ? selectAtts(build, false, false) : [];
+    // Natural top-5 (no forced/excluded)
+    const defFive = build ? selectAtts(build, null, null) : [];
     const supInDef = defFive.some(a => a.slot === 'muzzle');
     const optInDef = defFive.some(a => a.slot === 'optic');
+    // Initial toggle state: ON if slot is in natural top-5, OFF if not
+    const initSup = hasSup ? supInDef : null;
+    const initOpt = hasOpt ? optInDef : null;
     const togBtns = [
-      hasSup ? `<button class="att-tog${supInDef?' on':''}" data-att="sup" onclick="toggleAtt(event,'${w.id}')" title="${supInDef?'Schalldämpfer ist bereits drin':'Schalldämpfer einbauen'}">🔇 Schalldämpfer</button>` : '',
-      hasOpt ? `<button class="att-tog${optInDef?' on':''}" data-att="opt" onclick="toggleAtt(event,'${w.id}')" title="${optInDef?'Visier ist bereits drin':'Visier einbauen'}">🔭 Visier</button>` : '',
+      hasSup ? `<button class="att-tog${supInDef?' on':''}" data-att="sup" onclick="toggleAtt(event,'${w.id}')">🔇 Schalldämpfer</button>` : '',
+      hasOpt ? `<button class="att-tog${optInDef?' on':''}" data-att="opt" onclick="toggleAtt(event,'${w.id}')">🔭 Visier</button>` : '',
     ].filter(Boolean).join('');
 
     return `
@@ -550,7 +560,7 @@ function renderTier(tierName, ids, weaponsById, buildsById, ranks) {
     <div class="loadout" data-wid="${w.id}">
       <div class="ltitle" style="color:${tipLabelColors[fit.score]}">${fit.label}</div>
       ${togBtns ? `<div class="att-togs">${togBtns}</div>` : ''}
-      <div class="att-grid-wrap">${renderAttachments(build, supInDef, optInDef, w.type)}</div>
+      <div class="att-grid-wrap">${renderAttachments(build, initSup, initOpt, w.type)}</div>
     </div>`;
   }).join('');
 
@@ -586,8 +596,10 @@ function toggleAtt(e, weaponId) {
   const btn = e.currentTarget;
   btn.classList.toggle('on');
   const loadout = btn.closest('.loadout');
-  const withSup = !!loadout.querySelector('[data-att="sup"].on');
-  const withOpt = !!loadout.querySelector('[data-att="opt"].on');
+  const supBtn = loadout.querySelector('[data-att="sup"]');
+  const optBtn = loadout.querySelector('[data-att="opt"]');
+  const withSup = supBtn ? (supBtn.classList.contains('on') ? true : false) : null;
+  const withOpt = optBtn ? (optBtn.classList.contains('on') ? true : false) : null;
   const build = _globalState?.buildsById[weaponId];
   const wtype = loadout.previousElementSibling?.dataset?.type;
   loadout.querySelector('.att-grid-wrap').innerHTML = renderAttachments(build, withSup, withOpt, wtype);
