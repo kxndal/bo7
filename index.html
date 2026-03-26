@@ -432,16 +432,18 @@ function buildRanks(tiers, weaponsById) {
   return ranks;
 }
 
-// ── Fetch: lokale JSON-Dateien zuerst (GitHub Actions), sonst direkt ──
+// ── Fetch: lokale JSON → direkt → CORS-Proxy ─────────────────
 const LOCAL = { weapons: './weapons.json', builds: './builds.json', season: './season.json' };
 async function apiFetch(url, localKey) {
   if (localKey) {
-    try {
-      const r = await fetch(LOCAL[localKey], { cache: 'no-store' });
-      if (r.ok) return r.json();
-    } catch (_) {}
+    try { const r = await fetch(LOCAL[localKey], {cache:'no-store'}); if (r.ok) return r.json(); } catch(_) {}
   }
-  const r = await fetch(url);
+  try {
+    const r = await fetch(url, {signal: AbortSignal.timeout(6000)});
+    if (r.ok) return r.json();
+  } catch(_) {}
+  // CORS-Proxy als letzter Ausweg (GitHub Pages)
+  const r = await fetch('https://corsproxy.io/?' + encodeURIComponent(url));
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
@@ -469,6 +471,7 @@ function selectAtts(build, withSup, withOpt) {
   return [...forced, ...rest].slice(0, 5);
 }
 
+const NO_ATTS_TYPES = new Set(['MELEE','LAUNCHER','SPECIAL']);
 const PROFILE_FALLBACK = {
   SMG:            [{slot:'muzzle',name:'Schalldämpfer'},{slot:'barrel',name:'Kurzer Lauf'},{slot:'stock',name:'Leichter Schaft'},{slot:'rearGrip',name:'Sprint-to-Fire Griff'},{slot:'firemods',name:'Schnellfeuer-Mod'}],
   ASSAULT_RIFLE:  [{slot:'muzzle',name:'Schalldämpfer'},{slot:'optic',name:'Max. 1.5× Reflex'},{slot:'stock',name:'Mobilität-Schaft'},{slot:'rearGrip',name:'Sprint-to-Fire Griff'},{slot:'underbarrel',name:'Leichter Griff'}],
@@ -480,10 +483,8 @@ const PROFILE_FALLBACK = {
 };
 
 function renderAttachments(build, withSup, withOpt, weaponType) {
-  let five;
-  if (build) {
-    five = selectAtts(build, withSup, withOpt);
-  }
+  if (NO_ATTS_TYPES.has(weaponType)) return '<p style="color:var(--dim);font-size:12px">Keine Aufsätze verfügbar</p>';
+  const five = build ? selectAtts(build, withSup, withOpt) : null;
   if (!five?.length) {
     const fb = PROFILE_FALLBACK[weaponType] || PROFILE_FALLBACK.ASSAULT_RIFLE;
     return '<p style="color:var(--dim);font-size:11px;margin-bottom:6px">⚠ Noch kein wzstats-Build — Profil-Empfehlung:</p><div class="att-grid">' +
@@ -528,8 +529,9 @@ function renderTier(tierName, ids, weaponsById, buildsById, ranks) {
     // Fit label color
     const tipLabelColors = ['#555','#ffd54f','#82b1ff','#69f0ae'];
 
-    const hasSup = !!(build?.muzzle?.name);
-    const hasOpt = !!(build?.optic?.name);
+    const noAtts = NO_ATTS_TYPES.has(w.type);
+    const hasSup = !noAtts && !!(build?.muzzle?.name);
+    const hasOpt = !noAtts && !!(build?.optic?.name);
     // Check if suppressor/optic land naturally in top-5
     // Natural top-5 (no forced/excluded)
     const defFive = build ? selectAtts(build, null, null) : [];
