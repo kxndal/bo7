@@ -119,6 +119,10 @@
   .att { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; }
   .att-slot { font-size: 10px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
   .att-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .build-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .build-tab { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; color: var(--dim); cursor: pointer; transition: all .15s; }
+  .build-tab:hover { border-color: #888; color: var(--text); }
+  .build-tab.on { background: #1a2a3a; border-color: var(--blue); color: var(--blue); }
   .att-togs { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
   .att-tog { background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 600; color: var(--dim); cursor: pointer; transition: all .15s; }
   .att-tog:hover { border-color: #888; color: var(--text); }
@@ -412,6 +416,15 @@ const SLOT_DE = {
   wire: 'Schnur', grip: 'Griff', bolt: 'Verschluss', perk: 'Bonus'
 };
 const TIER_LABELS = { META: '⚡ META', S: 'S TIER', A: 'A TIER', B: 'B TIER', C: 'C TIER', D: 'D TIER' };
+const PLAYSTYLE_DE = {
+  FIVE_ATTACHMENTS:  '5 Aufsätze',
+  EIGHT_ATTACHMENTS: '8 Aufsätze',
+  LONG_RANGE:        'Distanz',
+  SHORT_RANGE:       'Nahkampf',
+  LOW_LEVEL:         'Anfänger',
+  VERSATILE:         'Vielseitig',
+  RANKED:            'Ranked',
+};
 
 function imgUrl(id, ver) {
   return `https://img.wzstats.gg/${id}_version${ver}/gunDisplayLoadouts`;
@@ -503,7 +516,8 @@ function renderTier(tierName, ids, weaponsById, buildsById, ranks) {
     if (!w) return '';
     const typeDe = TYPE_DE[w.type] || w.type;
     const rank   = ranks[id] || 1;
-    const build  = buildsById[id];
+    const builds = buildsById[id] || [];
+    const build  = builds[0] || null;
     const fit    = getFit(w.type);
     const recoil = getRecoil(w.id);
     const lvl    = w.unlockedAtPlayerLevel > 1 ? `<span class="wlvl">STUFE ${w.unlockedAtPlayerLevel}</span>` : '';
@@ -532,18 +546,22 @@ function renderTier(tierName, ids, weaponsById, buildsById, ranks) {
     const noAtts = NO_ATTS_TYPES.has(w.type);
     const hasSup = !noAtts && !!(build?.muzzle?.name);
     const hasOpt = !noAtts && !!(build?.optic?.name);
-    // Check if suppressor/optic land naturally in top-5
-    // Natural top-5 (no forced/excluded)
     const defFive = build ? selectAtts(build, null, null) : [];
     const supInDef = defFive.some(a => a.slot === 'muzzle');
     const optInDef = defFive.some(a => a.slot === 'optic');
-    // Initial toggle state: ON if slot is in natural top-5, OFF if not
     const initSup = hasSup ? supInDef : null;
     const initOpt = hasOpt ? optInDef : null;
     const togBtns = [
       hasSup ? `<button class="att-tog${supInDef?' on':''}" data-att="sup" onclick="toggleAtt(event,'${w.id}')">🔇 Schalldämpfer</button>` : '',
       hasOpt ? `<button class="att-tog${optInDef?' on':''}" data-att="opt" onclick="toggleAtt(event,'${w.id}')">🔭 Visier</button>` : '',
     ].filter(Boolean).join('');
+
+    const buildTabs = builds.length > 1 ? `<div class="build-tabs">` +
+      builds.map((b,i) => {
+        const label = PLAYSTYLE_DE[b.playstyle] || b.playstyle || `Build ${i+1}`;
+        const star  = b.isBO7BestBuild ? ' ⭐' : '';
+        return `<button class="build-tab${i===0?' on':''}" onclick="switchBuild(event,'${w.id}',${i})">${label}${star}</button>`;
+      }).join('') + `</div>` : '';
 
     return `
     <div class="weapon-card" data-type="${w.type}" data-recoil="${recoil.level}" onclick="toggle(this)">
@@ -559,8 +577,9 @@ function renderTier(tierName, ids, weaponsById, buildsById, ranks) {
       </div>
       <span class="chevron">▾</span>
     </div>
-    <div class="loadout" data-wid="${w.id}">
+    <div class="loadout" data-wid="${w.id}" data-build-idx="0">
       <div class="ltitle" style="color:${tipLabelColors[fit.score]}">${fit.label}</div>
+      ${buildTabs}
       ${togBtns ? `<div class="att-togs">${togBtns}</div>` : ''}
       <div class="att-grid-wrap">${renderAttachments(build, initSup, initOpt, w.type)}</div>
     </div>`;
@@ -592,6 +611,42 @@ function toggle(card) {
   if (!wasOpen) { card.classList.add('open'); detail.classList.add('open'); }
 }
 
+// ── Hilfsfunktion: aktuellen Build aus State holen ───────────
+function getCurrentBuild(loadout, weaponId) {
+  const idx = parseInt(loadout.dataset.buildIdx || '0', 10);
+  return (_globalState?.buildsById[weaponId] || [])[idx] || null;
+}
+
+// ── Build-Tab wechseln ────────────────────────────────────────
+function switchBuild(e, weaponId, idx) {
+  e.stopPropagation();
+  const btn = e.currentTarget;
+  const loadout = btn.closest('.loadout');
+  loadout.querySelectorAll('.build-tab').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  loadout.dataset.buildIdx = idx;
+  const build = getCurrentBuild(loadout, weaponId);
+  const wtype = loadout.previousElementSibling?.dataset?.type;
+  // Re-evaluate toggles for new build
+  const noAtts = NO_ATTS_TYPES.has(wtype);
+  const hasSup = !noAtts && !!(build?.muzzle?.name);
+  const hasOpt = !noAtts && !!(build?.optic?.name);
+  const defFive = build ? selectAtts(build, null, null) : [];
+  const supInDef = defFive.some(a => a.slot === 'muzzle');
+  const optInDef = defFive.some(a => a.slot === 'optic');
+  // Update toggle button visibility & state
+  const togWrap = loadout.querySelector('.att-togs');
+  if (togWrap) {
+    const supBtn = togWrap.querySelector('[data-att="sup"]');
+    const optBtn = togWrap.querySelector('[data-att="opt"]');
+    if (supBtn) { supBtn.hidden = !hasSup; if(hasSup) supBtn.classList.toggle('on', supInDef); }
+    if (optBtn) { optBtn.hidden = !hasOpt; if(hasOpt) optBtn.classList.toggle('on', optInDef); }
+  }
+  const withSup = hasSup ? supInDef : null;
+  const withOpt = hasOpt ? optInDef : null;
+  loadout.querySelector('.att-grid-wrap').innerHTML = renderAttachments(build, withSup, withOpt, wtype);
+}
+
 // ── Attachment toggle (Schalldämpfer / Visier) ────────────────
 function toggleAtt(e, weaponId) {
   e.stopPropagation();
@@ -600,9 +655,9 @@ function toggleAtt(e, weaponId) {
   const loadout = btn.closest('.loadout');
   const supBtn = loadout.querySelector('[data-att="sup"]');
   const optBtn = loadout.querySelector('[data-att="opt"]');
-  const withSup = supBtn ? (supBtn.classList.contains('on') ? true : false) : null;
-  const withOpt = optBtn ? (optBtn.classList.contains('on') ? true : false) : null;
-  const build = _globalState?.buildsById[weaponId];
+  const withSup = supBtn && !supBtn.hidden ? (supBtn.classList.contains('on') ? true : false) : null;
+  const withOpt = optBtn && !optBtn.hidden ? (optBtn.classList.contains('on') ? true : false) : null;
+  const build = getCurrentBuild(loadout, weaponId);
   const wtype = loadout.previousElementSibling?.dataset?.type;
   loadout.querySelector('.att-grid-wrap').innerHTML = renderAttachments(build, withSup, withOpt, wtype);
 }
@@ -728,9 +783,10 @@ function renderTop3(tiers, weaponsById) {
     const weaponsById = {};
     for (const w of tierData.weapons) weaponsById[w.id] = w;
 
-    const buildsById = {};
+    const buildsById = {}; // { weaponId: [build, build, ...] }
     for (const b of (buildsData.builds || [])) {
-      if (!buildsById[b.weaponId]) buildsById[b.weaponId] = b;
+      if (!buildsById[b.weaponId]) buildsById[b.weaponId] = [];
+      buildsById[b.weaponId].push(b);
     }
 
     const tiers = tierData.wzStatsTierList?.bo7 || {};
